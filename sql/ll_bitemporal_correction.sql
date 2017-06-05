@@ -13,7 +13,10 @@ DECLARE
   v_list_of_fields_to_insert text;
   v_table_attr text[];
   v_now temporal_relationships.time_endpoint:=p_now ;-- for compatiability with the previous version
+<<<<<<< HEAD
  -- v_last_asserted_start temporal_relationships.time_endpoint;
+=======
+>>>>>>> scalegenius/master
 BEGIN
  v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(p_table);
  IF  array_length(v_table_attr,1)=0

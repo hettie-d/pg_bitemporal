@@ -16,7 +16,7 @@ v_list_of_fields_to_insert_excl_effective text;
 v_table_attr text[];
 v_now timestamptz:=now();-- so that we can reference this time
 BEGIN 
- IF lower(p_asserted)<v_now::date --should we allow this precision?...
+ IF lower (p_asserted)<v_now::date --should we allow this precision?...
     OR upper(p_asserted)< 'infinity'
  THEN RAISE EXCEPTION'Asserted interval starts in the past or has a finite end: %', p_asserted
   ; 
