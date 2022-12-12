@@ -1,3 +1,5 @@
+--select bitemporal_internal.ll_generate_bitemp_for_schema('capture_messages_core_reporting')
+
 create or replace function bitemporal_internal.ll_generate_bitemp_for_schema(p_schema_name text)
 returns text as
 $BODY$
@@ -17,7 +19,7 @@ order by 1)
 loop
 v_table_definition:= format(
 $text$select * from 
-bitemporal_internal.ll_create_bitemporal_table ('%s_bitemporal',
+bitemporal_internal.ll_create_bitemporal_table ('%s_bt',
 %L,
 '$text$, 
 p_schema_name,
@@ -26,32 +28,40 @@ select conkey into v_business_key_def from pg_constraint where conrelid=v_rec.oi
 and contype='p';
 --raise notice '%', v_business_key_def;
 v_business_key:=NULL;
-for v_rec2 in (select 
-attnum,
-attname, typname,
-case typname when 'varchar' then '('||(atttypmod-4)::varchar||')' 
-when 'numeric' then '(10,2)'
-else ' '
-end  as field_length
-from pg_attribute ac 
-join pg_type t ON ac.atttypid=t.oid
-and ac.attrelid =v_rec.oid and attnum>0    
-order by attnum )
+for v_rec2 in (select ordinal_position,
+	             column_name::text as column_name,
+				       data_type::text||		 
+              case when character_maximum_length is not null 
+                 then '('||character_maximum_length::text||')'
+                 else ''
+                 end ||
+                 case data_type when 'numeric'
+                 then '('||numeric_precision::text||','||numeric_scale::text|| ')'
+                 else ''
+                 end
+                 as data_type,
+              case is_nullable 
+                when 'NO' then 'NOT NULL'
+                else ''
+                end as nullable
+	    from information_schema.columns 
+      where table_schema=p_schema_name
+            and table_name=v_rec.stg_name    
+order by ordinal_position)
 loop
-if v_rec2.attnum>1 then 
+if v_rec2.ordinal_position>1 then 
 v_table_definition:=
 v_table_definition||',';
 end if;
 v_table_definition:=
-v_table_definition||format($text$%s %s %s
+v_table_definition||format($text$%s %s 
 $text$,
-v_rec2.attname, 
-v_rec2.typname,
-v_rec2.field_length); 
-if v_rec2.attnum = any (v_business_key_def)
+v_rec2.column_name, 
+v_rec2.data_type); 
+if v_rec2.ordinal_position = any (v_business_key_def)
 then if  v_business_key is null
-then v_business_key:=v_rec2.attname ;else 
-   v_business_key:=v_business_key||','||v_rec2.attname;
+then v_business_key:=v_rec2.column_name ;else 
+   v_business_key:=v_business_key||','||v_rec2.column_name;
    end if;
  end if;  
  
