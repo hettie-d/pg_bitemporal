@@ -28,6 +28,8 @@ set search_path to bitemporal_internal, public;
 \ir ll_bitemporal_update.sql
 \ir ll_bitemporal_update_select.sql
 \ir ll_bitemporal_delete_select.sql
+\ir ll_create_bitemporal_table_partitioned.sql
+\ir ll_create_bitemporal_partition.sql
 
 commit;
 
