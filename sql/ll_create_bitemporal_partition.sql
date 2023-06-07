@@ -16,16 +16,15 @@ v_sql text;
 BEGIN
 v_business_key :=
       (select array_to_string(array_agg(a.attname), ',')
-              from
-              (select * from pg_attribute
-	                where attrelid::regclass= (p_schema||'.'||p_table)::regclass) a
-	            join
-              (select
-                unnest(partattrs) as attnum from pg_partitioned_table
-                where partrelid::regclass= (p_schema||'.'||p_table)::regclass) p
-             on a.attnum=p.attnum
-         );
-v_business_key_name :=substr(p_table||'_'||translate(
+       from pg_attribute a
+	                where attrelid::regclass= (p_schema||'.'||p_table)::regclass
+					        and attnum>1 and attnum in (
+	                             select unnest(conkey) as attnum 
+	                             from pg_constraint 
+	                             where conrelid::regclass= (p_schema||'.'||p_table)::regclass 
+		                                 and contype='p') 
+		   );
+v_business_key_name :=substr(p_partition_name||'_'||translate(
 translate(v_business_key, '
 ',''), ', ','_'),1,47)||'_assert_eff_excl';
 v_business_key_gist :=replace(v_business_key, ',',' WITH =,')||' WITH =, asserted WITH &&, effective WITH &&';

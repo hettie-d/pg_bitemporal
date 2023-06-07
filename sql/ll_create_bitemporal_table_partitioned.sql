@@ -2,7 +2,8 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_table_partit
 	p_schema text,
 	p_table text,
 	p_table_definition text,
-	p_business_key text)
+	p_business_key text,
+	p_partitioned_by text default null)
     RETURNS boolean
     LANGUAGE 'plpgsql'
  AS $BODY$
@@ -24,7 +25,7 @@ v_serial_key_name :=v_serial_key ||' serial';
 v_pk_constraint_name:= p_table||'_pk';
 v_table_definition :=replace (p_table_definition, ' serial', ' integer');
 v_business_key_array :=string_to_array(p_business_key, ',');
-v_partition_clause := ' partition by range('||p_business_key||')';
+v_partition_clause := ' partition by range('||coalesce(p_partitioned_by,p_business_key)||')';
 --EXECUTE
 v_sql :=format($create$
 CREATE TABLE %s.%s (
