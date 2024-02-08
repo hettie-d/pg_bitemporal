@@ -39,7 +39,7 @@ Input:
 - p_schema - the name of the schema where we want to create a bitemporal table
 - p_table - the name of the table
 - p_table_definition - a text field which should contain an actual DDL for all non-bitemporal fields
-- p_business_key - the name of the column, which whill be userd as a natural key
+- p_business_key - the name of the column, which will be used as a natural key
 
 Output:
 
