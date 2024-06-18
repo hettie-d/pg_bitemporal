@@ -21,6 +21,7 @@ set search_path to bitemporal_internal, public;
 \ir ll_is_bitemporal_table.sql
 \ir ll_check_bitemporal_update_conditions.sql
 \ir ll_bitemporal_correction.sql
+\ir ll_bitemporal_correction_hist.sql
 \ir ll_bitemporal_delete.sql
 \ir ll_bitemporal_inactivate.sql
 \ir ll_bitemporal_insert.sql

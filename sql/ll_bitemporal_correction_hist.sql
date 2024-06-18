@@ -56,6 +56,18 @@ execute format($$select distinct (effective)from %s
  temporal_relationships.timeperiod(lower(p_effective), upper(v_effective)),
  temporal_relationships.timeperiod(v_now, 'infinity'));
  
+ if upper(p_effective)<upper(v_effective) then 
+ perform bitemporal_internal.ll_bitemporal_update(
+ p_schema_name, 
+ p_table_name, 
+ p_search_fields,  /*split the record, do not change vaues)*/
+ p_search_values,
+ p_search_fields,
+ p_search_values,
+ temporal_relationships.timeperiod(upper(p_effective), upper(v_effective)),
+ temporal_relationships.timeperiod(v_now, 'infinity'));
+end if;
+v_effective_start :=least(upper(p_effective),upper(v_effective));
 select  bitemporal_internal.ll_bitemporal_correction(
  p_schema_name, 
  p_table_name, 
@@ -63,10 +75,11 @@ select  bitemporal_internal.ll_bitemporal_correction(
  p_list_of_values ,
 p_search_fields,
  p_search_values,
- temporal_relationships.timeperiod(lower(p_effective), upper(v_effective)),
+ temporal_relationships.timeperiod(lower(p_effective), v_effective_start),
  v_now)  into v_cnt;
 
-	v_effective_start:=upper(v_effective);	v_cnt:=1;
+	--v_effective_start:=upper(v_effective);	
+	v_cnt:=1;
 ELSE 
   v_effective_start:=lower(p_effective);
 END IF;     

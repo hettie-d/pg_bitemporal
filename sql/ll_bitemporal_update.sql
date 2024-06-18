@@ -21,13 +21,13 @@ v_keys_old int[];
 v_keys int[];
 v_now timestamptz:=now();-- so that we can reference this time
 BEGIN 
- IF lower(p_asserted)<v_now::date --should we allow this precision?...
+ /*IF lower(p_asserted)<v_now::date --should we allow this precision?...
     OR upper(p_asserted)< 'infinity'
  THEN RAISE EXCEPTION'Asserted interval starts in the past or has a finite end: %', p_asserted
   ; 
   RETURN v_rowcount;
  END IF;  
-
+*/
 v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
 IF  array_length(v_table_attr,1)=0
       THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
