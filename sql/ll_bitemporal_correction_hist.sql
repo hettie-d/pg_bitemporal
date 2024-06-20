@@ -21,6 +21,9 @@ v_sql  text;
   v_keys int[];
   v_keys_old  int[];
   v_effective temporal_relationships.timeperiod;
+  v_asserted temporal_relationships.timeperiod; 
+  u_effective temporal_relationships.timeperiod;
+  u_asserted temporal_relationships.timeperiod;
 BEGIN
  v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
  IF  array_length(v_table_attr,1)=0
@@ -30,7 +33,7 @@ BEGIN
 
 v_list_of_fields_to_insert:= array_to_string(v_table_attr, ',','');
 
-execute format($$select distinct (effective)from %s 
+execute format($$select distinct effective, asserted from %s 
       WHERE ( %s )=( %s ) AND %L::timestamptz<@effective
                           AND upper(asserted)='infinity' 
                           AND lower(asserted)<%L $$
@@ -40,34 +43,56 @@ execute format($$select distinct (effective)from %s
           , lower(p_effective)
           , v_now
           )
-      into v_effective ;
+      into v_effective, v_asserted ;
 	--  raise notice 'effective:%',v_effective;
  IF lower(v_effective)<lower(p_effective)
    THEN  ---create new interval
   -- raise notice 'new interval:%', temporal_relationships.timeperiod(lower(p_effective), upper(v_effective));
   
-  perform bitemporal_internal.ll_bitemporal_update(
+ perform bitemporal_internal.ll_bitemporal_split_effective(
  p_schema_name, 
  p_table_name, 
- p_search_fields,  /*split the record, do not change vaues)*/
+ p_search_fields,  
  p_search_values,
- p_search_fields,
- p_search_values,
- temporal_relationships.timeperiod(lower(p_effective), upper(v_effective)),
- temporal_relationships.timeperiod(v_now, 'infinity'));
+ lower(p_effective),
+ v_asserted);
  
  if upper(p_effective)<upper(v_effective) then 
- perform bitemporal_internal.ll_bitemporal_update(
+  perform bitemporal_internal.ll_bitemporal_split_effective(
  p_schema_name, 
  p_table_name, 
- p_search_fields,  /*split the record, do not change vaues)*/
+ p_search_fields,  
  p_search_values,
- p_search_fields,
- p_search_values,
- temporal_relationships.timeperiod(upper(p_effective), upper(v_effective)),
- temporal_relationships.timeperiod(v_now, 'infinity'));
+ upper(p_effective),
+ v_asserted);
 end if;
-v_effective_start :=least(upper(p_effective),upper(v_effective));
+end if;
+
+execute format($$select distinct effective, asserted from %s 
+      WHERE ( %s )=( %s ) AND %L::timestamptz<@effective
+                          AND upper(asserted)='infinity' 
+                          AND lower(asserted)<%L $$
+          , v_table
+          , p_search_fields
+          , p_search_values
+          , upper(p_effective)
+          , v_now
+          )
+      into u_effective, u_asserted ;
+IF upper(p_effective)<upper(u_effective)
+AND upper(p_effective)>lower(u_effective)
+   THEN  ---create new interval
+ perform bitemporal_internal.ll_bitemporal_split_effective(
+ p_schema_name, 
+ p_table_name, 
+ p_search_fields,  
+ p_search_values,
+ upper(p_effective),
+ u_asserted);
+END IF;
+---done with splitting intervals
+   
+/*   
 select  bitemporal_internal.ll_bitemporal_correction(
  p_schema_name, 
  p_table_name, 
@@ -83,21 +108,19 @@ p_search_fields,
 ELSE 
   v_effective_start:=lower(p_effective);
 END IF;     
- 
+ */
 EXECUTE 
 --v_sql:=
  format($u$ WITH updt AS (UPDATE %s SET asserted = temporal_relationships.timeperiod(lower(asserted), %L)
-                    WHERE ( %s )=( %s ) AND lower(effective)>= %L::temporal_relationships.time_endpoint 
-		                  and upper(effective) <=upper(%L::temporal_relationships.timeperiod)     ---is_included (effective )
-                          AND upper(asserted)='infinity' 
-                          AND lower(asserted)<%L returning %s )
+                    WHERE ( %s )=( %s ) AND effective<@  %L
+                         AND upper(asserted)='infinity' 
+                         AND lower(asserted)<%L returning %s )
                                       SELECT array_agg(%s) FROM updt
                                       $u$  --end assertion period for the old record(s), if any
           , v_table
           , v_now
           , p_search_fields
           , p_search_values
-          , v_effective_start
           , p_effective
           , v_now
           , v_serial_key
