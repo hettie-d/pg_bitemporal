@@ -115,7 +115,7 @@ BEGIN
   return substring(s from 0::int for at );
 END;
 $f$;
-
+drop type if exists  bitemporal_internal.bitemporal_pg_constraint;
 create
 type bitemporal_internal.bitemporal_pg_constraint
 as
