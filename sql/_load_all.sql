@@ -20,7 +20,7 @@ set search_path to bitemporal_internal, public;
 \ir ll_bitemporal_list_of_fields.sql
 \ir ll_is_bitemporal_table.sql
 \ir ll_check_bitemporal_update_conditions.sql
-\ir ll_check_bitemporal_split_effective.sql
+\ir ll_bitemporal_split_effective.sql
 \ir ll_bitemporal_correction.sql
 \ir ll_bitemporal_correction_hist.sql
 \ir ll_bitemporal_delete.sql
