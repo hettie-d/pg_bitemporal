@@ -15,6 +15,9 @@ v_list_of_fields_to_insert text:=' ';
 v_list_of_fields_to_insert_excl_effective text;
 v_table_attr text[];
 v_now timestamptz:=now();-- so that we can reference this time
+x_alias_list_of_fields text:= 'x.' || REPLACE(p_list_of_fields, ',', ',x.');
+x_alias_p_search_fields text:= 'x.' || REPLACE(p_search_fields, ',', ',x.');
+t_alias_p_search_fields text:= 't.' || REPLACE(p_search_fields, ',', ',t.');
 BEGIN 
  IF lower(p_asserted)<v_now::date --should we allow this precision?...
     OR upper(p_asserted)< 'infinity'
@@ -97,15 +100,15 @@ EXECUTE format($i$INSERT INTO %s ( %s, effective, asserted )
 );
 
 --update new record(s) in new assertion rage with new values                                  
-                                  
-EXECUTE format($u$ UPDATE %s t SET (%s) = (%s) 
-                    WHERE ( %s ) in ( %s ) AND effective=%L
-                                        AND asserted=%L $u$  
+
+EXECUTE format($u$ UPDATE %s t SET (%s) = (%s)
+                    FROM (%s) as x WHERE (%s) = (%s) AND effective=%L AND asserted=%L $u$
           , p_table
           , p_list_of_fields
+          , x_alias_list_of_fields
           , p_values_selected_update
-          , p_search_fields
-          , p_values_selected_search
+          , x_alias_p_search_fields
+          , t_alias_p_search_fields
           , p_effective
           , p_asserted);
           
@@ -136,6 +139,9 @@ v_table text:=p_schema_name||'.'||p_table_name;
 v_keys_old int[];
 v_keys int[];
 v_now timestamptz:=now();-- so that we can reference this time
+x_alias_list_of_fields text:= 'x.' || REPLACE(p_list_of_fields, ',', ',x.');
+x_alias_p_search_fields text:= 'x.' || REPLACE(p_search_fields, ',', ',x.');
+t_alias_p_search_fields text:= 't.' || REPLACE(p_search_fields, ',', ',t.');
 BEGIN 
  IF lower(p_asserted)<v_now::date --should we allow this precision?...
     OR upper(p_asserted)< 'infinity'
@@ -215,12 +221,15 @@ into v_keys;
                            
                                   
 EXECUTE format($u$ UPDATE %s t SET (%s) = (%s)
-                    WHERE ( %s ) in ( %s ) $u$  
+                    FROM (%s) as x WHERE ( %s ) IN ( %s ) AND (%s) = (%s) $u$
           , v_table
           , p_list_of_fields
+          , x_alias_list_of_fields
           , p_values_selected_update
           , v_serial_key
-          , array_to_string(v_keys,',')); 
+          , array_to_string(v_keys,',')
+          , x_alias_p_search_fields
+          , t_alias_p_search_fields);
           
           
           
